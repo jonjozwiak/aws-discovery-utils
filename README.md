@@ -34,3 +34,64 @@ Optionally two additional paramters can be specified:
 
 ### Creating tables in Athena
 Once the Parquet files are in S3, modify the statements in discovery_athena.ddl to reference the correct bucket. Run from the Athena console within a new or existing database, and you should be able to start querying your exported Discovery data.
+
+## Example End to End Usage
+
+```
+pip install boto3 pyspark
+brew cask install java
+
+git clone https://github.com/awslabs/aws-discovery-utils.git
+cd aws-discovery-utils
+
+# Update REGION in export.py to reflect your setup
+
+# Ensure you have credentials exported to access your target AWS account
+mkdir output
+python export.py --directory output/ --start-time 2021-03-04T00:00 --end-time 2021-03-05T00:00
+python convert_csv.py --directory output/ aws-application-discovery-service-yourbucket us-east-1
+
+# Modify discovery_athena.ddl to reflect your bucket
+sed -i.bak -e 's/<BUCKET>/aws-application-discovery-service-yourbucket/g' athena_processes_agent.ddl
+sed -i.bak -e 's/<BUCKET>/aws-application-discovery-service-yourbucket/g' athena_network_interface_agent.ddl
+sed -i.bak -e 's/<BUCKET>/aws-application-discovery-service-yourbucket/g' athena_os_info_agent.ddl
+sed -i.bak -e 's/<BUCKET>/aws-application-discovery-service-yourbucket/g' athena_sys_performance_agent.ddl
+sed -i.bak -e 's/<BUCKET>/aws-application-discovery-service-yourbucket/g' athena_inbound_connection_agent.ddl
+sed -i.bak -e 's/<BUCKET>/aws-application-discovery-service-yourbucket/g' athena_outbound_connection_agent.ddl
+sed -i.bak -e 's/<BUCKET>/aws-application-discovery-service-yourbucket/g' athena_iana_service_ports_import.ddl
+
+# Create a Glue database pointing to your S3 bucket (I did this in the console)
+# aws glue create-database ...
+
+# Create each of the tables in discovery_athena.ddl (I did this in the console) Update below based on your settings... 
+
+aws athena start-query-execution --query-string "$(cat athena_processes_agent.ddl)" --work-group "primary" --query-execution-context Database=application_discovery_service_database,Catalog=AwsDataCatalog --result-configuration OutputLocation=s3://aws-athena-query-results-YOURACCOUNTNUMBER-us-east-1 --region us-east-1
+
+# Create the IANA Port Registry Import
+curl -o service-names-port-numbers.csv https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.csv
+
+aws s3 cp service-names-port-numbers.csv s3://aws-application-discovery-service-yourbucket/iana_service_ports_import/service-names-port-numbers.csv --region us-east-1
+aws athena start-query-execution --query-string "$(cat athena_iana_service_ports_import.ddl)" --work-group "primary" --query-execution-context Database=application_discovery_service_database,Catalog=AwsDataCatalog --result-configuration OutputLocation=s3://aws-athena-query-results-YOURACCOUNTNUMBER-us-east-1 --region us-east-1 
+
+# Create the helper views 
+aws athena start-query-execution --query-string "$(cat athena_view_hostname_ip_helper.ddl)" --work-group "primary" --query-execution-context Database=application_discovery_service_database,Catalog=AwsDataCatalog --result-configuration OutputLocation=s3://aws-athena-query-results-YOURACCOUNTNUMBER-us-east-1 --region us-east-1
+aws athena start-query-execution --query-string "$(cat athena_view_valid_inbound_ips_helper.ddl)" --work-group "primary" --query-execution-context Database=application_discovery_service_database,Catalog=AwsDataCatalog --result-configuration OutputLocation=s3://aws-athena-query-results-YOURACCOUNTNUMBER-us-east-1 --region us-east-1
+aws athena start-query-execution --query-string "$(cat athena_view_inbound_query_helper.ddl)" --work-group "primary" --query-execution-context Database=application_discovery_service_database,Catalog=AwsDataCatalog --result-configuration OutputLocation=s3://aws-athena-query-results-YOURACCOUNTNUMBER-us-east-1 --region us-east-1
+aws athena start-query-execution --query-string "$(cat athena_view_valid_outbound_ips_helper.ddl)" --work-group "primary" --query-execution-context Database=application_discovery_service_database,Catalog=AwsDataCatalog --result-configuration OutputLocation=s3://aws-athena-query-results-YOURACCOUNTNUMBER-us-east-1 --region us-east-1
+aws athena start-query-execution --query-string "$(cat athena_view_outbound_query_helper.ddl)" --work-group "primary" --query-execution-context Database=application_discovery_service_database,Catalog=AwsDataCatalog --result-configuration OutputLocation=s3://aws-athena-query-results-YOURACCOUNTNUMBER-us-east-1 --region us-east-1
+```
+
+Look at the sample queries here for further details:
+https://docs.aws.amazon.com/application-discovery/latest/userguide/working-with-data-athena.html
+
+If you want to view the parquet files on a Mac, one way to do this is:
+
+```
+brew install parquet-tools 
+parquet-tools rowcount ~/Downloads/2021-03-04T000000Z_o-10xzeaa.parquet 
+
+parquet-tools head -n 1 ~/Downloads/2021-03-04T000000Z_o-10xzeaa.parquet
+
+parquet-tools meta ~/Downloads/2021-03-04T000000Z_o-10xzeaa.parquet
+```
+

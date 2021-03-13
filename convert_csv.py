@@ -189,9 +189,12 @@ if __name__ == '__main__':
 
     target_dir = os.path.join(dir_path, "parquetExports")
     #s3 = boto3.client('s3', aws_access_key_id="ACCESSKEY", aws_secret_access_key="SECRETACCESSKEY")
-    s3 = boto3.client('s3')
+    s3 = boto3.client('s3', region_name=region)
     try:
-        s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={'LocationConstraint': region})
+        if region == 'us-east-1':
+            s3.create_bucket(Bucket=bucket_name)
+        else:
+            s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={'LocationConstraint': region})
     except Exception as e:
         if (type(e).__name__ == "BucketAlreadyOwnedByYou"):
             pass

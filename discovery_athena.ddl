@@ -1,4 +1,4 @@
-CREATE EXTERNAL TABLE IF NOT EXISTS process (
+CREATE EXTERNAL TABLE IF NOT EXISTS processes_agent (
   `account_number` bigint,
   `agent_id` string,
   `agent_assigned_process_id` string,
@@ -11,10 +11,10 @@ CREATE EXTERNAL TABLE IF NOT EXISTS process (
 ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
 WITH SERDEPROPERTIES (
   'serialization.format' = '1'
-) LOCATION 's3://<BUCKET>/process/'
+) LOCATION 's3://<BUCKET>/processes/'
 TBLPROPERTIES ('has_encrypted_data'='false');
 
-CREATE EXTERNAL TABLE IF NOT EXISTS network_interface (
+CREATE EXTERNAL TABLE IF NOT EXISTS network_interface_agent (
   `account_number` bigint,
   `agent_id` string,
   `name` string,
@@ -31,7 +31,7 @@ WITH SERDEPROPERTIES (
 ) LOCATION 's3://<BUCKET>/networkInterface/'
 TBLPROPERTIES ('has_encrypted_data'='false');
 
-CREATE EXTERNAL TABLE IF NOT EXISTS os_info (
+CREATE EXTERNAL TABLE IF NOT EXISTS os_info_agent (
   `account_number` bigint,
   `agent_id` string,
   `os_name` string,
@@ -47,7 +47,7 @@ WITH SERDEPROPERTIES (
 ) LOCATION 's3://<BUCKET>/osInfo/'
 TBLPROPERTIES ('has_encrypted_data'='false');
 
-CREATE EXTERNAL TABLE IF NOT EXISTS system_performance (
+CREATE EXTERNAL TABLE IF NOT EXISTS system_performance_agent (
   `account_number` bigint,
   `agent_id` string,
   `total_disk_bytes_read_per_sec_in_kbps` double,
@@ -74,7 +74,7 @@ WITH SERDEPROPERTIES (
 ) LOCATION 's3://<BUCKET>/systemPerformance/'
 TBLPROPERTIES ('has_encrypted_data'='false');
 
-CREATE EXTERNAL TABLE IF NOT EXISTS destination_process_connection (
+CREATE EXTERNAL TABLE IF NOT EXISTS inbound_connection_agent (
   `account_number` bigint,
   `agent_id` string,
   `source_ip` string,
@@ -92,7 +92,7 @@ WITH SERDEPROPERTIES (
 ) LOCATION 's3://<BUCKET>/destinationProcessConnection/'
 TBLPROPERTIES ('has_encrypted_data'='false');
 
-CREATE EXTERNAL TABLE IF NOT EXISTS source_process_connection (
+CREATE EXTERNAL TABLE IF NOT EXISTS outbound_connection_agent (
   `account_number` bigint,
   `agent_id` string,
   `source_ip` string,
